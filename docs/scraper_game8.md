@@ -42,3 +42,30 @@ https://game8.co/games/Genshin-Impact/archives/297465
 - มีเพิ่มอาจจะบวกคะแนนให้เดี๋ยวขอออกแบบอีกที
 - V1 ใช้วิธีคำนวณแบบง่ายก่อน
 - V2 จะพัฒนาเป็น Character-specific (อาจจะเน้นที่ C2 กับ C6 ตามประสบการณ์น่ะนะ)
+
+### Recommended Constellation Selection
+- ตัวละคร 5
+  - พิจารณาเฉพาะ C1 และ C2
+  - เลือก Constellation ที่มีคะแนน Rating เต็ม
+  - ถ้าทั้ง C1 และ C2 มีคะแนนเท่ากัน ให้เลือก Constellation ที่ต่ำกว่า (เช่น C1)
+  - ถ้าทั้ง C1 และ C2 มีคะแนนไม่เต็มจะนับให้เป็น 0
+
+- ตัวละคร 4
+  - พิจารณาทุก Constellation
+  - เลือก Constellation ที่มีคะแนน Rating สูงที่สุด
+  - หากมีหลาย Constellation ที่ได้คะแนนสูงสุด ให้เลือก Constellation ที่สูงกว่า (เช่น C6)
+
+เหตุผล
+
+- ผู้เล่นส่วนใหญ่มีโอกาสได้รับตัวละคร 5★ ถึงระดับ C1 หรือ C2 มากกว่าระดับ C6
+- ตัวละคร 4★ สามารถสะสมจนถึง C6 ได้จากการเล่นและการสุ่มในระยะยาว
+
+## Output Schema
+
+| Column | Type | Description |
+|--------|------|-------------|
+| character_name | string | Character name |
+| rarity | int | 4 หรือ 5 |
+| role | string | Character role |
+| tier | string | Tier จาก Main Tier List |
+| recommended_constellation | int | Recommended Constellation จาก Game8 |
