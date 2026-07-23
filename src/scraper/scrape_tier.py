@@ -64,7 +64,7 @@ def parse_tier_table(html: str):
     # ----------------------------
     # ใช้เฉพาะ Tier Table
     # ----------------------------
-    tier_table = tables[1]
+    tier_table = tables[2]
 
     rows = tier_table.find_all("tr")[1:]
 
@@ -92,13 +92,38 @@ def parse_tier_table(html: str):
 
             links = cell.find_all("a", class_="a-link")
 
-            print(f"\n{tier} | {role}")
+            for link in links:
 
-            print(f"Characters: {len(links)}")
+                url = link.get("href")
 
-            for link in links[:3]:
+                image = link.find("img")
 
-                print(link.get("href"))
+                if image is None:
+                    continue
+
+                # ดึงชื่อจาก alt
+                name = image.get("alt", "")
+
+                # ทำความสะอาดชื่อ
+                name = (
+                    name.replace("Genshin - ", "")
+                    .replace(" DPS Rank", "")
+                    .replace(" Sub-DPS Rank", "")
+                    .replace(" Support Rank", "")
+                    .strip()
+                )  
+
+                records.append({
+                    "character_name": name,
+                    "role": role,
+                    "tier": tier,
+                    "character_url": url
+                })
+
+
+    for i, table in enumerate(tables):
+        headers = [th.get_text(strip=True) for th in table.find_all("th")[:4]]
+        print(i, headers)
 
     return records
 
