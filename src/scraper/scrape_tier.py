@@ -64,17 +64,21 @@ def parse_tier_table(html: str):
     # ----------------------------
     # ใช้เฉพาะ Tier Table
     # ----------------------------
-    tier_table = tables[2]
+    tier_table = None
+    for table in tables:
+
+        headers = [th.get_text(strip=True) for th in table.find_all("th")]
+
+        if headers[:4] == ["", "Main DPS", "Sub-DPS", "Support"]:
+            tier_table = table
+            break
+
+    if tier_table is None:
+        raise RuntimeError("Tier table not found.")
+    
+
 
     rows = tier_table.find_all("tr")[1:]
-
-    print(f"Rows = {len(rows)}")
-
-    # บันทึกไว้เปิดดูใน VSCode
-    with open("table_1.html", "w", encoding="utf-8") as f:
-        f.write(tier_table.prettify())
-
-    print("Saved table_1.html")
 
     for row in rows:
 
@@ -82,11 +86,7 @@ def parse_tier_table(html: str):
 
         tier = tier_img["alt"].replace(" Tier", "")
 
-        print(tier)
-
         cells = row.find_all("td")
-
-        print(len(cells))
 
         for role, cell in zip(roles, cells):
 
@@ -119,11 +119,6 @@ def parse_tier_table(html: str):
                     "tier": tier,
                     "character_url": url
                 })
-
-
-    for i, table in enumerate(tables):
-        headers = [th.get_text(strip=True) for th in table.find_all("th")[:4]]
-        print(i, headers)
 
     return records
 
