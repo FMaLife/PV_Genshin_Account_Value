@@ -2,8 +2,8 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 
-INPUT_PATH = "data/raw/G8_character_tiers.csv"
 OUTPUT_PATH = "data/raw/G8_character_info.csv"
+INPUT_PATH = "data/raw/G8_character_tiers.csv"
 
 HEADERS = {
     "User-Agent":
@@ -12,12 +12,14 @@ HEADERS = {
         "Chrome/138.0.0.0 Safari/537.36"
 }
 
+
 def fetch_html(url: str) -> str:
 
     response = requests.get(url, headers=HEADERS)
     response.raise_for_status()
 
     return response.text
+
 
 def parse_rarity(html: str) -> int:
 
@@ -37,7 +39,8 @@ def parse_rarity(html: str) -> int:
 
     return None
 
-def parse_recommended_constellation(html: str) -> str:
+
+def parse_recommended_constellation(html: str, rarity: int) -> str:
 
     soup = BeautifulSoup(html, "html.parser")
 
@@ -47,23 +50,68 @@ def parse_recommended_constellation(html: str) -> str:
 
         text = header.get_text(" ", strip=True)
 
-        if "Best Constellation Rating" not in text:
+        # รองรับทั้ง
+        # Best Constellation Rating
+        # Best Constellation Rating and Explanation
+        if "Best Constellation" not in text:
             continue
 
         table = header.find_next("table")
 
-        best_constellation = "C0"
+        if table is None:
+            break
+
+        ratings = []
 
         for row in table.find_all("tr")[1:]:
 
-            constellation = row.find("th").get_text(strip=True)
-            rating = row.find("td").get_text(strip=True)
+            th = row.find("th")
+            td = row.find("td")
 
-            if rating == "★★★":
-                return constellation
+            if th is None or td is None:
+                continue
 
-        return best_constellation
+            constellation = th.get_text(strip=True)
+            rating = td.get_text(" ", strip=True)
 
+            if "★★★" in rating:
+                stars = 3
+            elif "★★☆" in rating:
+                stars = 2
+            elif "★☆☆" in rating:
+                stars = 1
+            else:
+                stars = 0
+
+            ratings.append((constellation, stars))
+
+        # ----------------------------
+        # 5★ Characters
+        # ----------------------------
+        if rarity == 5:
+
+            for constellation, stars in ratings:
+
+                if constellation in ["C1", "C2"] and stars == 3:
+                    return constellation
+
+            return "C0"
+
+        # ----------------------------
+        # 4★ Characters
+        # ----------------------------
+        else:
+
+            best = "C0"
+
+            for constellation, stars in ratings:
+
+                if stars == 3:
+                    best = constellation
+
+            return best
+
+    # ถ้าไม่พบหัวข้อ Best Constellation
     return "C0"
 
 def main():
@@ -79,20 +127,25 @@ def main():
 
         html = fetch_html(row["character_url"])
 
-        rarities.append(parse_rarity(html))
+        rarity = parse_rarity(html)
+
+        rarities.append(rarity)
+
         recommendations.append(
-            parse_recommended_constellation(html)
+            parse_recommended_constellation(html, rarity)
         )
 
     df["rarity"] = rarities
     df["recommended_constellation"] = recommendations
 
-    print(df.head())
-    print(df.isnull().sum())
-
     df.to_csv(OUTPUT_PATH, index=False)
 
+    print(df.head())
+
+    print(df.isnull().sum())
+
     print(f"\nSaved to {OUTPUT_PATH}")
+
 
 if __name__ == "__main__":
     main()
