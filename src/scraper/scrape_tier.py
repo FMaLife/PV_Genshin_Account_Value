@@ -1,5 +1,5 @@
 """
-Scrape Character Tier data from Game8.
+Scrape Character Tier data from Game8 C0 Tier List.
 
 Output:
     data/raw/G8_character_tiers.csv
@@ -7,6 +7,7 @@ Output:
 
 import pandas as pd
 import requests
+import re
 from bs4 import BeautifulSoup
 
 
@@ -31,13 +32,8 @@ HEADERS = {
 # --------------------------------------------------------------------
 
 def fetch_html(url: str) -> str:
-    """
-    Download webpage HTML.
-    """
-
     response = requests.get(url, headers=HEADERS)
     response.raise_for_status()
-
     return response.text
 
 
@@ -46,43 +42,37 @@ def fetch_html(url: str) -> str:
 # --------------------------------------------------------------------
 
 def parse_tier_table(html: str):
-    """
-    Parse Game8 tier table.
-    """
 
-    roles = [ "Main DPS", "Sub-DPS", "Support" ]
+    roles = ["Main DPS", "Sub-DPS", "Support"]
 
     soup = BeautifulSoup(html, "html.parser")
 
     records = []
 
-    # หา table ทั้งหมด
-    tables = soup.find_all("table")
+    # หาเฉพาะตาราง Tier (Main / C0 / C6)
+    tier_tables = []
 
-    print(f"Found {len(tables)} tables")
-
-    # ----------------------------
-    # ใช้เฉพาะ Tier Table
-    # ----------------------------
-    tier_table = None
-    for table in tables:
+    for table in soup.find_all("table"):
 
         headers = [th.get_text(strip=True) for th in table.find_all("th")]
 
         if headers[:4] == ["", "Main DPS", "Sub-DPS", "Support"]:
-            tier_table = table
-            break
+            tier_tables.append(table)
 
-    if tier_table is None:
-        raise RuntimeError("Tier table not found.")
-    
+    if len(tier_tables) < 2:
+        raise RuntimeError("C0 tier table not found.")
 
+    # ตารางที่ 2 คือ C0 Tier List
+    tier_table = tier_tables[1]
 
     rows = tier_table.find_all("tr")[1:]
 
     for row in rows:
 
         tier_img = row.find("th").find("img")
+
+        if tier_img is None:
+            continue
 
         tier = tier_img["alt"].replace(" Tier", "")
 
@@ -101,17 +91,22 @@ def parse_tier_table(html: str):
                 if image is None:
                     continue
 
-                # ดึงชื่อจาก alt
                 name = image.get("alt", "")
 
-                # ทำความสะอาดชื่อ
                 name = (
                     name.replace("Genshin - ", "")
                     .replace(" DPS Rank", "")
                     .replace(" Sub-DPS Rank", "")
                     .replace(" Support Rank", "")
                     .strip()
-                )  
+                )
+
+                # ตัด constellation suffix C0 ที่ติดมากับ alt text
+                name = re.sub(r"\s+C\d$", "", name).strip()
+
+                # Skip Traveler variants
+                if name.startswith("Traveler"):
+                    continue
 
                 records.append({
                     "character_name": name,
@@ -140,7 +135,7 @@ def export_csv(records, output_path: str):
 
 def main():
 
-    print("Downloading Game8 Tier List...")
+    print("Downloading Game8 C0 Tier List...")
 
     html = fetch_html(TIER_LIST_URL)
 
@@ -148,12 +143,11 @@ def main():
 
     records = parse_tier_table(html)
 
-    print(f"\nFound {len(records)} records")
+    print(f"Found {len(records)} records")
 
     export_csv(records, OUTPUT_PATH)
 
-    print("Done.")
-
+    print(f"Saved to {OUTPUT_PATH}")
 
 if __name__ == "__main__":
     main()
